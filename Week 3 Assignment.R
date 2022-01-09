@@ -1,4 +1,4 @@
-## make Vector for an example
+## make Vector for an example_
 makeVector <- function(x = numeric()) {
   m <- NULL
   set <- function(y) {
