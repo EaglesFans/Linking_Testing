@@ -1,0 +1,103 @@
+---
+title: "PA1_template"
+author: "Choong-Hoon Hyun"
+date: "5/7/2022"
+output: html_document
+---
+# Peer-graded Assignment: Reproducible Research Week 2 Course Proejct 1
+
+## Loading and preprocessing the data 
+
+### Download file, load the dataset to R, and process/transforam the data into a format suitable for the analysis
+```{r Loading and Preprocessing the data into a format sutable for the analysis, echo=TRUE}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+f <- file.path(getwd(), "activity.zip")
+download.file(fileUrl, f, curl = "method")
+unzip(zipfile = "activity.zip")
+
+activity_monitoring_data <- read.csv("activity.csv")
+activity_monitoring_data$date <- as.Date(activity_monitoring_data$date, "%Y-%m-%d")
+head(activity_monitoring_data)
+```
+
+## What is mean total number of steps taken per day?
+
+###  1. Calculate the total number of steps taken per day
+#### Load ggplot2
+```{r Load ggplot2, echo=TRUE}
+library(ggplot2)
+```
+
+```{r Make dataset for the total number of steps taken per day, echo=TRUE}
+steps_per_day <- split(activity_monitoring_data, activity_monitoring_data$date)
+total_steps <- sapply(steps_per_day, function(x) {
+  sum(x[, "steps"])
+})
+total_steps_df <- as.data.frame(total_steps)
+head(total_steps_df)
+```
+### 2. If you do not understand the difference between a histogram and a barplot, research the difference between them. Make a histogram of the total number of steps taken each day
+#### Plot a histogram of the total number of steps taken each day
+```{r Histogram of the total number of steps taken each day, echo=TRUE}
+ggplot(total_steps_df, aes(total_steps)) + geom_histogram(binwidth = 1000, fill = "white", col = "blue") +
+  labs(x= "Steps", y = "Frequency", title = "Total Number of Steps Taken each Day (Histogram)")
+```
+
+### 3. Calculate and report the mean and median of the total number of steps taken per day
+#### Mean of the total number of steps taken per day
+```{r Mean of the total number of steps taken per day, echo=TRUE}
+mean(total_steps_df$total_steps, na.rm = TRUE)
+```
+#### Median of the total number of steps taken per day
+```{r Median of the total number of steps taken per day, echo=TRUE}
+median(total_steps_df$total_steps, na.rm = TRUE)
+```
+
+## What is the average daily activity pattern?
+
+### 1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)  
+#### Load dplyr package
+```{r Load dplyr, echo=TRUE}
+library(dplyr)
+```
+
+#### Make dataset to show the average steps per intervals
+```{r dataset for the average steps per intervals, echo=TRUE}
+avg_daily_steps <- activity_monitoring_data %>% group_by(interval) %>%
+  summarize(avg_steps = mean(steps, na.rm = TRUE))
+head(avg_daily_steps)
+```
+
+#### Make a time series plot
+```{r Plot a time series plot, echo=TRUE}
+ggplot(avg_daily_steps, aes(interval, avg_steps)) + geom_line(col = "orange") + 
+  labs(x = "5-minute intervals", y = "Average Number of Steps", title = "Average Daily Steps Across All Days")
+```
+  
+### 2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r 5-min interval contains the max number of steps, echo=TRUE}
+subset(avg_daily_steps, avg_steps == max(avg_steps))
+```
+
+## Imputing missing values
+### Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
+
+### 1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r dataset for total number of missing values, echo=TRUE}
+total_number_missing_values <- subset(activity_monitoring_data, is.na(activity_monitoring_data))
+nrow(total_number_missing_values)
+```
+
+### 2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.  
+
+#### *Strategy for missing values*: 
+* The average of the associated intervals will be used to fill in all of the missing values in the dataset. Fill the NA values with the average steps dataset obtained from "avg_daily_steps".
+
+### 3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+```{r new dataset with the missing data filled in, echo=TRUE}
+activity_monitoring_data_no_NA <- left_join(activity_monitoring_data, avg_daily_steps, by = "interval") %>%
+  transmute(steps = coalesce(steps, avg_steps), date, interval) 
+head(activity_monitoring_data_no_NA)
+```
+
+
